@@ -28,7 +28,7 @@ func (storage *Storage) getBucketByKey(key string) *bucket {
 func (storage *Storage) Put(
 	key string,
 	value string,
-//в секундах
+	//в секундах
 	ttl int64,
 ) {
 

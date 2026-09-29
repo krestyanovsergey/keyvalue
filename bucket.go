@@ -9,6 +9,8 @@ import (
 type bucket struct {
 	head *element
 	mu   sync.RWMutex
+	//размер корзины
+	size int
 }
 
 func newBucket() *bucket {
@@ -49,6 +51,7 @@ func (bkt *bucket) put(
 
 	//новая пара становится головой
 	bkt.head = newElement(key, value, deleteAfter, bkt.head)
+	bkt.size++
 	return true
 }
 
@@ -87,15 +90,23 @@ func (bkt *bucket) delete(key string) (deleted bool) {
 	//если удалить нужно голову, то головой становится следующий узел
 	if bkt.head.key == key {
 		bkt.head = bkt.head.next
+		bkt.size--
 		return true
 	}
 
 	for prev, cur := bkt.head, bkt.head.next; cur != nil; prev, cur = cur, cur.next {
 		if cur.key == key {
 			prev.next, cur.next = cur.next, nil
+			bkt.size--
 			return true
 		}
 	}
 
 	return false
+}
+
+func (bkt *bucket) getSize() int {
+	bkt.mu.RLock()
+	defer bkt.mu.RUnlock()
+	return bkt.size
 }

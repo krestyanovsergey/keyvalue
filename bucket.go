@@ -96,7 +96,7 @@ func (bkt *bucket) delete(key string) (deleted bool) {
 
 	for prev, cur := bkt.head, bkt.head.next; cur != nil; prev, cur = cur, cur.next {
 		if cur.key == key {
-			prev.next, cur.next = cur.next, nil
+			prev.next = cur.next
 			bkt.size--
 			return true
 		}
@@ -109,4 +109,37 @@ func (bkt *bucket) getSize() int {
 	bkt.mu.RLock()
 	defer bkt.mu.RUnlock()
 	return bkt.size
+}
+
+// deleteExpired удаляет протухшие элементы.
+// Возвращает сколько элементов было удалено и сколько их было всего до удаления.
+func (bkt *bucket) deleteExpired() (removed, total int) {
+
+	bkt.mu.Lock()
+	defer bkt.mu.Unlock()
+
+	total = bkt.size
+
+	for bkt.head != nil && bkt.head.isReadyForDeletion() {
+		bkt.head = bkt.head.next
+		bkt.size--
+		removed++
+	}
+
+	if bkt.head == nil {
+		return removed, total
+	}
+
+	for prev, cur := bkt.head, bkt.head.next; cur != nil; {
+		if cur.isReadyForDeletion() {
+			prev.next = cur.next
+			bkt.size--
+			removed++
+			cur = prev.next
+			continue
+		}
+		prev, cur = cur, cur.next
+	}
+
+	return removed, total
 }

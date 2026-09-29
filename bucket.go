@@ -15,6 +15,17 @@ func newBucket() *bucket {
 	return &bucket{}
 }
 
+// newBucketSlice создает n bucket
+func newBucketSlice(n int) []*bucket {
+	slice := make([]*bucket, n)
+
+	for i := range n {
+		slice[i] = newBucket()
+	}
+
+	return slice
+}
+
 // put добавляет новую пару или обновляет существующую.
 // Возвращает true, если пара была создана,
 // false если была обновлена существующая

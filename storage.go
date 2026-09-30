@@ -66,6 +66,11 @@ func (storage *Storage) Put(
 	ttl int,
 ) {
 
+	//считаем что пара была добавлена и немедленно удалена по ttl
+	if ttl <= 0 {
+		return
+	}
+
 	bkt := storage.getBucketByKey(key)
 	deleteAfter := time.Now().Add(time.Duration(ttl) * time.Second)
 	created := bkt.put(key, value, deleteAfter)

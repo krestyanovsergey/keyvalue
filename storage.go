@@ -96,7 +96,8 @@ func (storage *Storage) cleanRandomBucket() (removed, total int) {
 // cleanRound раунд очистки
 func (storage *Storage) cleanRound() {
 	length := len(storage.buckets)
-	batch := int(float64(length) * storage.collectorBatchPercent)
+	//за каждую итерацию должна быть очищена как минимум одна корзина
+	batch := max(int(float64(length)*storage.collectorBatchPercent), 1)
 
 	for range storage.collectorMaxIterations {
 		var removed, total int

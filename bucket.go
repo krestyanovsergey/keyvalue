@@ -66,7 +66,7 @@ func (bkt *bucket) get(key string) (string, bool) {
 	for cur := bkt.head; cur != nil; cur = cur.next {
 		if cur.key == key {
 			//пара существует, но она протухла
-			if cur.isReadyForDeletion() {
+			if cur.isReadyForDeletion(time.Now()) {
 				return "", false
 			}
 			return cur.value, true
@@ -119,8 +119,9 @@ func (bkt *bucket) deleteExpired() (removed, total int) {
 	defer bkt.mu.Unlock()
 
 	total = bkt.size
+	now := time.Now()
 
-	for bkt.head != nil && bkt.head.isReadyForDeletion() {
+	for bkt.head != nil && bkt.head.isReadyForDeletion(now) {
 		bkt.head = bkt.head.next
 		bkt.size--
 		removed++
@@ -131,7 +132,7 @@ func (bkt *bucket) deleteExpired() (removed, total int) {
 	}
 
 	for prev, cur := bkt.head, bkt.head.next; cur != nil; {
-		if cur.isReadyForDeletion() {
+		if cur.isReadyForDeletion(now) {
 			prev.next = cur.next
 			bkt.size--
 			removed++

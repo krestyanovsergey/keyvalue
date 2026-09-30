@@ -41,6 +41,6 @@ func (elem *element) setNext(next *element) {
 }
 
 // isReadyForDeletion проверяет готов ли элемент к удалению
-func (elem *element) isReadyForDeletion() bool {
-	return time.Now().After(elem.deleteAfter)
+func (elem *element) isReadyForDeletion(now time.Time) bool {
+	return now.After(elem.deleteAfter)
 }

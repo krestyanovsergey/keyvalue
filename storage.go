@@ -3,7 +3,6 @@ package keyvalue
 import (
 	"context"
 	"hash/maphash"
-	"math/rand/v2"
 	"sync"
 	"time"
 )
@@ -13,6 +12,9 @@ type Storage struct {
 	seed    maphash.Seed
 
 	//COLLECTOR
+
+	//Корзины очищаются последовательно (кольцевая очередь)
+	collectorCursor int
 
 	//Как часто будут выполняться раунды очистки
 	collectorInterval time.Duration
@@ -102,13 +104,6 @@ func (storage *Storage) Delete(key string) {
 
 //СБОРЩИК МУСОРА
 
-// cleanRandomBucket очищает случайную корзину
-func (storage *Storage) cleanRandomBucket() (removed, total int) {
-	length := len(storage.buckets)
-	index := rand.IntN(length)
-	return storage.buckets[index].deleteExpired()
-}
-
 // cleanRound раунд очистки
 func (storage *Storage) cleanRound() {
 	length := len(storage.buckets)
@@ -119,7 +114,11 @@ func (storage *Storage) cleanRound() {
 		var removed, total int
 
 		for range batch {
-			r, t := storage.cleanRandomBucket()
+			r, t := storage.buckets[storage.collectorCursor].deleteExpired()
+			storage.collectorCursor++
+			if storage.collectorCursor == length {
+				storage.collectorCursor = 0
+			}
 			removed += r
 			total += t
 		}

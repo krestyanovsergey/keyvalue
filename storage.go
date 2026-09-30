@@ -4,6 +4,7 @@ import (
 	"context"
 	"hash/maphash"
 	"math/rand/v2"
+	"sync"
 	"time"
 )
 
@@ -27,6 +28,9 @@ type Storage struct {
 
 	//Остановить collector
 	cancel context.CancelFunc
+
+	//Чтобы Stop дождался завершения startCleaner
+	wg sync.WaitGroup
 }
 
 func NewStorage(config Config) (*Storage, error) {
@@ -46,7 +50,11 @@ func NewStorage(config Config) (*Storage, error) {
 		cancel:                  cancel,
 	}
 
-	go storage.startCleaner(ctx)
+	storage.wg.Add(1)
+	go func() {
+		defer storage.wg.Done()
+		storage.startCleaner(ctx)
+	}()
 
 	return storage, nil
 }
@@ -143,4 +151,5 @@ func (storage *Storage) startCleaner(ctx context.Context) {
 // Stop останавливает сборку мусора
 func (storage *Storage) Stop() {
 	storage.cancel()
+	storage.wg.Wait()
 }

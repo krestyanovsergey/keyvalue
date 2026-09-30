@@ -29,7 +29,10 @@ type Storage struct {
 	cancel context.CancelFunc
 }
 
-func NewStorage(config Config) *Storage {
+func NewStorage(config Config) (*Storage, error) {
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -45,7 +48,7 @@ func NewStorage(config Config) *Storage {
 
 	go storage.startCleaner(ctx)
 
-	return storage
+	return storage, nil
 }
 
 // getBucketByKey вычисляет bucket на основе ключа

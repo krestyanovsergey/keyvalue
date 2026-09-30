@@ -90,7 +90,7 @@ func (storage *Storage) Put(
 
 func (storage *Storage) Get(key string) (string, bool) {
 	bkt := storage.getBucketByKey(key)
-	return bkt.get(key)
+	return bkt.get(key, time.Now())
 }
 
 func (storage *Storage) Delete(key string) {
@@ -105,6 +105,9 @@ func (storage *Storage) Delete(key string) {
 
 // cleanRound раунд очистки
 func (storage *Storage) cleanRound() {
+	//единый момент времени для всего раунда
+	now := time.Now()
+
 	length := len(storage.buckets)
 	//за каждую итерацию должна быть очищена как минимум одна корзина
 	batch := max(int(float64(length)*storage.collectorBatchRatio), 1)
@@ -113,7 +116,7 @@ func (storage *Storage) cleanRound() {
 		var removed, total int
 
 		for range batch {
-			r, t := storage.buckets[storage.collectorCursor].deleteExpired()
+			r, t := storage.buckets[storage.collectorCursor].deleteExpired(now)
 			storage.collectorCursor++
 			if storage.collectorCursor == length {
 				storage.collectorCursor = 0

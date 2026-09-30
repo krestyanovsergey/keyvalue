@@ -9,7 +9,7 @@ import (
 type bucket struct {
 	head *element
 	mu   sync.RWMutex
-	//размер корзины
+	//Количество узлов в списке (включая просроченные)
 	size int
 }
 
@@ -29,8 +29,8 @@ func newBucketSlice(n int) []*bucket {
 }
 
 // put добавляет новую пару или обновляет существующую.
-// Возвращает true, если пара была создана,
-// false если была обновлена существующая
+// Возвращает true, если создан новый узел,
+// false если обновлен существующий (в том числе просроченный)
 func (bkt *bucket) put(
 	key string,
 	value string,
@@ -56,9 +56,9 @@ func (bkt *bucket) put(
 }
 
 // get возвращает значение по ключу.
-// Просроченные пары не отдаются (возвращается false),
+// Пары, просроченные на момент now, не отдаются (возвращается false),
 // но и не удаляются
-func (bkt *bucket) get(key string) (string, bool) {
+func (bkt *bucket) get(key string, now time.Time) (string, bool) {
 
 	bkt.mu.RLock()
 	defer bkt.mu.RUnlock()
@@ -66,7 +66,7 @@ func (bkt *bucket) get(key string) (string, bool) {
 	for cur := bkt.head; cur != nil; cur = cur.next {
 		if cur.key == key {
 			//пара существует, но она протухла
-			if cur.isReadyForDeletion(time.Now()) {
+			if cur.isReadyForDeletion(now) {
 				return "", false
 			}
 			return cur.value, true
@@ -105,21 +105,14 @@ func (bkt *bucket) delete(key string) (deleted bool) {
 	return false
 }
 
-func (bkt *bucket) getSize() int {
-	bkt.mu.RLock()
-	defer bkt.mu.RUnlock()
-	return bkt.size
-}
-
-// deleteExpired удаляет протухшие элементы.
+// deleteExpired удаляет элементы, просроченные на момент now.
 // Возвращает сколько элементов было удалено и сколько их было всего до удаления.
-func (bkt *bucket) deleteExpired() (removed, total int) {
+func (bkt *bucket) deleteExpired(now time.Time) (removed, total int) {
 
 	bkt.mu.Lock()
 	defer bkt.mu.Unlock()
 
 	total = bkt.size
-	now := time.Now()
 
 	for bkt.head != nil && bkt.head.isReadyForDeletion(now) {
 		bkt.head = bkt.head.next

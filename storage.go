@@ -36,7 +36,7 @@ func NewStorage(config Config) *Storage {
 	storage := &Storage{
 		buckets:                 newBucketSlice(config.InitialBucketCount),
 		seed:                    maphash.MakeSeed(),
-		collectorInterval:       time.Duration(config.CollectorInterval) * time.Millisecond,
+		collectorInterval:       config.CollectorInterval,
 		collectorMaxIterations:  config.CollectorMaxIterations,
 		collectorBatchRatio:     config.CollectorBatchRatio,
 		collectorThresholdRatio: config.CollectorThresholdRatio,

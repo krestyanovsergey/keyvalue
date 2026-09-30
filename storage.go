@@ -69,11 +69,10 @@ func (storage *Storage) getBucketByKey(key string) *bucket {
 	return storage.buckets[index]
 }
 
-// Put ttl в секундах
 func (storage *Storage) Put(
 	key string,
 	value string,
-	ttl int,
+	ttl time.Duration,
 ) {
 
 	//считаем что пара была добавлена и немедленно удалена по ttl
@@ -82,7 +81,7 @@ func (storage *Storage) Put(
 	}
 
 	bkt := storage.getBucketByKey(key)
-	deleteAfter := time.Now().Add(time.Duration(ttl) * time.Second)
+	deleteAfter := time.Now().Add(ttl)
 	created := bkt.put(key, value, deleteAfter)
 	if created {
 		//увеличить размер

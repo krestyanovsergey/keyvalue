@@ -1,6 +1,7 @@
 package keyvalue
 
 import (
+	"context"
 	"hash/maphash"
 	"math/rand/v2"
 	"time"
@@ -23,9 +24,15 @@ type Storage struct {
 	collectorBatchPercent float64
 	//Сколько мусора должно быть в текущей итерации, чтобы запустить следующую
 	collectorThresholdPercent float64
+
+	//Остановить collector
+	cancel context.CancelFunc
 }
 
 func NewStorage(config Config) *Storage {
+
+	ctx, cancel := context.WithCancel(context.Background())
+
 	storage := &Storage{
 		buckets:                   newBucketSlice(config.InitialBucketCount),
 		seed:                      maphash.MakeSeed(),
@@ -33,9 +40,10 @@ func NewStorage(config Config) *Storage {
 		collectorMaxIterations:    config.CollectorMaxIterations,
 		collectorBatchPercent:     config.CollectorBatchPercent,
 		collectorThresholdPercent: config.CollectorThresholdPercent,
+		cancel:                    cancel,
 	}
 
-	go storage.startCleaner()
+	go storage.startCleaner(ctx)
 
 	return storage
 }
@@ -51,7 +59,7 @@ func (storage *Storage) getBucketByKey(key string) *bucket {
 func (storage *Storage) Put(
 	key string,
 	value string,
-	//в секундах
+//в секундах
 	ttl int,
 ) {
 
@@ -108,10 +116,22 @@ func (storage *Storage) cleanRound() {
 }
 
 // startCleaner запуск очистки
-func (storage *Storage) startCleaner() {
+func (storage *Storage) startCleaner(ctx context.Context) {
 	ticker := time.NewTicker(storage.collectorInterval)
 	defer ticker.Stop()
-	for range ticker.C {
-		storage.cleanRound()
+
+	for {
+		select {
+		case <-ticker.C:
+			storage.cleanRound()
+		case <-ctx.Done():
+			return
+		}
 	}
+
+}
+
+// Stop останавливает сборку мусора
+func (storage *Storage) Stop() {
+	storage.cancel()
 }

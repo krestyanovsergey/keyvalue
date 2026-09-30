@@ -20,10 +20,10 @@ type Storage struct {
 
 	//Максимальное количество итераций в раунде
 	collectorMaxIterations int
-	//Какой процент корзин очищается на каждой итерации
-	collectorBatchPercent float64
+	//Какая доля корзин очищается на каждой итерации
+	collectorBatchRatio float64
 	//Сколько мусора должно быть в текущей итерации, чтобы запустить следующую
-	collectorThresholdPercent float64
+	collectorThresholdRatio float64
 
 	//Остановить collector
 	cancel context.CancelFunc
@@ -34,13 +34,13 @@ func NewStorage(config Config) *Storage {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	storage := &Storage{
-		buckets:                   newBucketSlice(config.InitialBucketCount),
-		seed:                      maphash.MakeSeed(),
-		collectorInterval:         time.Duration(config.CollectorInterval) * time.Millisecond,
-		collectorMaxIterations:    config.CollectorMaxIterations,
-		collectorBatchPercent:     config.CollectorBatchPercent,
-		collectorThresholdPercent: config.CollectorThresholdPercent,
-		cancel:                    cancel,
+		buckets:                 newBucketSlice(config.InitialBucketCount),
+		seed:                    maphash.MakeSeed(),
+		collectorInterval:       time.Duration(config.CollectorInterval) * time.Millisecond,
+		collectorMaxIterations:  config.CollectorMaxIterations,
+		collectorBatchRatio:     config.CollectorBatchRatio,
+		collectorThresholdRatio: config.CollectorThresholdRatio,
+		cancel:                  cancel,
 	}
 
 	go storage.startCleaner(ctx)
@@ -56,10 +56,10 @@ func (storage *Storage) getBucketByKey(key string) *bucket {
 	return storage.buckets[index]
 }
 
+// Put ttl в секундах
 func (storage *Storage) Put(
 	key string,
 	value string,
-//в секундах
 	ttl int,
 ) {
 
@@ -97,7 +97,7 @@ func (storage *Storage) cleanRandomBucket() (removed, total int) {
 func (storage *Storage) cleanRound() {
 	length := len(storage.buckets)
 	//за каждую итерацию должна быть очищена как минимум одна корзина
-	batch := max(int(float64(length)*storage.collectorBatchPercent), 1)
+	batch := max(int(float64(length)*storage.collectorBatchRatio), 1)
 
 	for range storage.collectorMaxIterations {
 		var removed, total int
@@ -109,7 +109,7 @@ func (storage *Storage) cleanRound() {
 		}
 
 		//Если бы все ведра были пусты или в них было не так много мусора
-		if total == 0 || float64(removed)/float64(total) < storage.collectorThresholdPercent {
+		if total == 0 || float64(removed)/float64(total) < storage.collectorThresholdRatio {
 			//Нет смысла делать следующую итерацию
 			return
 		}

@@ -69,23 +69,21 @@ func (storage *Storage) getBucketByKey(key string) *bucket {
 	return storage.buckets[index]
 }
 
+// Put сохраняет пару на время ttl.
+// Запрос с ttl <= 0 невалиден и игнорируется
 func (storage *Storage) Put(
 	key string,
 	value string,
 	ttl time.Duration,
 ) {
 
-	//считаем что пара была добавлена и немедленно удалена по ttl
 	if ttl <= 0 {
 		return
 	}
 
 	bkt := storage.getBucketByKey(key)
 	deleteAfter := time.Now().Add(ttl)
-	created := bkt.put(key, value, deleteAfter)
-	if created {
-		//увеличить размер
-	}
+	bkt.put(key, value, deleteAfter)
 }
 
 func (storage *Storage) Get(key string) (string, bool) {
@@ -95,10 +93,7 @@ func (storage *Storage) Get(key string) (string, bool) {
 
 func (storage *Storage) Delete(key string) {
 	bkt := storage.getBucketByKey(key)
-	deleted := bkt.delete(key)
-	if deleted {
-		//уменьшить размер
-	}
+	bkt.delete(key)
 }
 
 //СБОРЩИК МУСОРА
